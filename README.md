@@ -79,7 +79,7 @@ root@wlanpi:/home/wlanpi/profiler# profiler.py -c 100 -s "Profiler" --no11r
 ![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/screenshot1.png)
 
 ## Caveats
-- Note that this is work in progress and is not production ready and is not fully tested or guaranteed to report accurate info. **You have been warned**
+- Note that this is work in progress and is not guaranteed to report accurate info (despite our best efforts). **You have been warned**
 - A client will generally only report the capabilities it has that match the network it associates to. If you want the client to report all of its capabilities, it **must** be associating with a network that supports those capabilities (e,g, a 3 stream client will not report it supports 3 streams if the AP is asscoiates with supports only one stream). The fake AP in this script attempts to provide a simulate a fully featured AP, but this is obviously a sumulated AP, so there may be cases when it does not behave as expected. 
 - Reporting of 802.11k capabilities is very poor among clients I have tested - treat with extreme caution (check for neighbor report requests from a WLC/AP debug to be sure)
 
