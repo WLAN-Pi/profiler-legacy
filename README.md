@@ -76,7 +76,7 @@ root@wlanpi:/home/wlanpi/profiler# profiler.py -c 100 -s "Profiler" --no11r
 
 ## Screenshot
 
-![Screenshot](https://github.com/wifinigel/wlan-client-capability/blob/master/screenshot.PNG)
+![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/screenshot1.png)
 
 ## Caveats
 - Note that this is work in progress and is not production ready and is not fully tested or guaranteed to report accurate info. **You have been warned**
