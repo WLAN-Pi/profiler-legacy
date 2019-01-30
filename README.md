@@ -35,9 +35,9 @@ To trigger client profiling:
 
 - Fire up the client(s) to test
 - Search for the SSID configured on the fake AP
-- Attempt to join the fake AP SSID
+- Attempt to join the fake AP SSID from the test client
 - When prompted, enter a random PSK on the client under test (any string of 8 or more characters will do)
-- After a few seconds, a textual report will hopefully be displayed on SSH session already established to the WLANPi (note the client will not joing the fake AP SSID)
+- After a few seconds, a textual report will (hopefully) be displayed in SSH session already established to the WLAN Pi as it tries to associate. Note the client will not join the fake AP SSID.
 - Once clients have been tested and successfully triggered a client report, the captured association frame is dumped in to a PCAP file (browse to "http://<ip_address_of_wlanpi>/profiler" to see PCAP dumps and text reports)
 
 ## Usage
