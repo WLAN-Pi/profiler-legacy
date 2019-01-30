@@ -29,9 +29,9 @@ To use the script on the WLANPi:
 - Ensure that a USB wireless adapter that support monitor mode (e.g. Comfast CF-912AC) is plugged in to the WLANPi
 - Run the script using the command : ./profiler.py -c 36 -s "My_SSID" (enter the root password when prompted)
 
-The script will run continuously, listening for association requests and analyzing the client capabilites in realtime. To end the script, hit "Ctrl-c". leave the script running while testing clients.
+The script will run continuously, listening for association requests and analyzing the client capabilites in realtime. To end the script, hit "Ctrl-c". Leave the script running while testing clients.
 
-To trigger the client profiling:
+To trigger client profiling:
 
 - Fire up the client(s) to test
 - Search for the SSID configured on the fake AP
