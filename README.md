@@ -29,11 +29,16 @@ To use the script on the WLANPi:
 - Ensure that a USB wireless adapter that support monitor mode (e.g. Comfast CF-912AC) is plugged in to the WLANPi
 - Run the script using the command : ./profiler.py -c 36 -s "My_SSID" (enter the root password when prompted)
 
-The script will run continuously, listening for association requests and analyzing the client capabilites in realtime.
+The script will run continuously, listening for association requests and analyzing the client capabilites in realtime. To end the script, hit "Ctrl-c". leave the script running while testing clients.
 
-To end the script, hit "Ctrl-c"
+To trigger the client profiling:
 
-SSH to the NanoPi, kill a few troublesome processes, place the wireless NIC on the channel you wish to monitor using airodump-ng and then run the script:
+- Fire up the client(s) to test
+- Search for the SSID configured on the fake AP
+- Attempt to join the fake AP SSID
+- When prompted, enter a random PSK on the client under test (any string of 8 or more characters will do)
+- After a few seconds, a textual report will hopefully be displayed on SSH session already established to the WLANPi (note the client will not joing the fake AP SSID)
+- Once clients have been tested and successfully triggered a client report, the captured association frame is dumped in to a PCAP file (browse to "http://<ip_address_of_wlanpi>/profiler" to see PCAP dumps and text reports)
 
 ## Usage
 
