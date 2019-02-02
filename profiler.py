@@ -460,8 +460,8 @@ def run_msg(ap_interface, ap_ssid, ap_channel):
 
     print("\n" + "-" * 44)
     print("Fake AP Starting... \n")
-    print("SSID:{} ".format(ap_ssid))
-    print("PSK: it doesn't matter :)")
+    print("SSID: {} ".format(ap_ssid))
+    print("PSK: meow.meow")
     print("Channel: {}".format(ap_channel))
     print("Interface: {}".format(ap_interface))
     if SSH_DEST_IP:
@@ -469,7 +469,7 @@ def run_msg(ap_interface, ap_ssid, ap_channel):
     print("-" * 44)
     print("\n####################################################################################################")
     print("Connect a Wi-Fi client to SSID:",ap_ssid, "enter anything for a PSK")
-    print("we don't actually need the device to connect, we only need the client to send an association request")
+    print("we don't really need the device to associate, we only need get the client to send an association request")
     print("####################################################################################################\n")
 
 
