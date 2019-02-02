@@ -3,7 +3,7 @@
 ########################################################################
 # define fake AP parameters
 CHANNEL = 36
-SSID = 'Client Capabilties'
+SSID = 'WLAN Pi'
 INTERFACE = 'wlan0'
 #
 # !!!!!!!!!!!!!! Do Not Touch Anything Below Here (Please) !!!!!!!!!!!!
@@ -25,9 +25,9 @@ import time
 import csv
 import getopt
 
-__author__ = 'Jerry Ola, Nigel Bowden'
+__author__ = 'Jerry Olla, Nigel Bowden'
 __version__ = '0.1'
-__email__ = 'wlanpi@gmail.com'
+__email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
 # we must be root to run this script - exit with msg if not
