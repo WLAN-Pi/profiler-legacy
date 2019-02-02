@@ -64,19 +64,19 @@ Command line options:
 
 ```
 # capture frames on channel 48 using the default SSID
-root@wlanpi:/home/wlanpi/profiler# profiler.py -c 48
+wlanpi@wlanpi:/home/wlanpi/profiler# sudo profiler.py -c 48
 
 ```
 
 ```
 # capture frames on channel 36 using an SSID called 'JOIN ME'
-root@wlanpi:/home/wlanpi/profiler# profiler.py -c 36 -s "JOIN ME"
+wlanpi@wlanpi:/home/wlanpi/profiler# sudo profiler.py -c 36 -s "JOIN ME"
 
 ```
 
 ```
 # capture frames on channel 100 using an SSID called 'Profiler' with 802.11r disabled for clients that don't like 11r
-root@wlanpi:/home/wlanpi/profiler# profiler.py -c 100 -s "Profiler" --no11r
+wlanpi@wlanpi:/home/wlanpi/profiler# sudo profiler.py -c 100 -s "Profiler" --no11r
 ```
 
 ## Screenshot
