@@ -318,7 +318,7 @@ def text_report(frame_src_addr, capability_dict, mac_addr, client_dir, csv_file)
     # start report
     report_text += '\n'
     report_text += '-' * 60
-    report_text += "\nClient capabilites report - Client MAC: " + frame_src_addr + "\n"
+    report_text += "\nClient capabilities report - Client MAC: " + frame_src_addr + "\n"
     report_text += '-' * 60
     report_text += '\n'
     
@@ -461,7 +461,7 @@ def run_msg(ap_interface, ap_ssid, ap_channel):
     print("\n" + "-" * 44)
     print("Fake AP Starting... \n")
     print("SSID: {} ".format(ap_ssid))
-    print("PSK: meow.meow")
+    print("PSK: [anything]")
     print("Channel: {}".format(ap_channel))
     print("Interface: {}".format(ap_interface))
     if SSH_DEST_IP:
