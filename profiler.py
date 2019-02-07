@@ -461,7 +461,7 @@ def run_msg(ap_interface, ap_ssid, ap_channel):
     print("\n" + "-" * 44)
     print("Fake AP Starting... \n")
     print("SSID: {} ".format(ap_ssid))
-    print("PSK: [anything]")
+    print("PSK: testtest")
     print("Channel: {}".format(ap_channel))
     print("Interface: {}".format(ap_interface))
     if SSH_DEST_IP:
