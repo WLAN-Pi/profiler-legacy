@@ -459,16 +459,16 @@ def run_msg(ap_interface, ap_ssid, ap_channel):
     global SSH_DEST_IP
 
     print("\n" + "-" * 44)
-    print("Fake AP Starting... \n")
+    print("Profiler AP Started \n")
     print("SSID: {} ".format(ap_ssid))
-    print("PSK: testtest")
+    print("PSK: 12345678")
     print("Channel: {}".format(ap_channel))
     print("Interface: {}".format(ap_interface))
     if SSH_DEST_IP:
         print("Results: http://{}/profiler/".format(SSH_DEST_IP))
     print("-" * 44)
     print("\n####################################################################################################")
-    print("Connect a Wi-Fi client to SSID:",ap_ssid, "enter anything for a PSK")
+    print("Connect a Wi-Fi client to SSID:",ap_ssid, "enter any random 8 characters for the PSK")
     print("we don't really need the device to associate, we only need get the client to send an association request")
     print("####################################################################################################\n")
 
