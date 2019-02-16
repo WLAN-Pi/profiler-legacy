@@ -26,7 +26,7 @@ import csv
 import getopt
 
 __author__ = 'Jerry Olla, Nigel Bowden'
-__version__ = '0.1'
+__version__ = '0.11'
 __email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
@@ -571,6 +571,7 @@ def main():
     ##########################
 
     if_cmds = [
+        'airmon-ng check kill',
         'ifconfig {} down'.format(ap_interface),
         'iwconfig {} mode monitor'.format(ap_interface),
         'ifconfig {} up'.format(ap_interface),
