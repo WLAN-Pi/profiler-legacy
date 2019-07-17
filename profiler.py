@@ -26,7 +26,7 @@ import csv
 import getopt
 
 __author__ = 'Jerry Olla, Nigel Bowden'
-__version__ = '0.11'
+__version__ = '0.2'
 __email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
