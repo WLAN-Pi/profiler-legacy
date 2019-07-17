@@ -24,6 +24,7 @@ import os
 import time
 import csv
 import getopt
+from manuf import manuf
 
 __author__ = 'Jerry Olla, Nigel Bowden, Kobe Watkins'
 __version__ = '0.3'
@@ -106,6 +107,9 @@ time_now = time.strftime("%Y-%m-%d-%H-%M-%S")
 # build csv filename
 csv_file = DIRS['reports_dir'] + '/db-' + time_now + '.csv'
 
+# Setup up our MAC OUI lookup
+oui_lookup = manuf.MacParser()
+
 ##################
 # Functions
 ##################
@@ -128,6 +132,10 @@ def analyze_frame(packet, silent_mode=False):
     
     # add client to detected clients list
     detected_clients.append(frame_src_addr)
+    
+    # lookup client OUI
+    mac_oui_manuf = oui_lookup.get_manuf(frame_src_addr)
+    
     
     # get mac address in dashed format to use later
     mac_addr = frame_src_addr.replace(':', '-', 5)
@@ -329,11 +337,11 @@ def analyze_frame(packet, silent_mode=False):
         capability_dict['Supported_Channels'] =  "Not reported"
     
     # print our report to stdout
-    text_report(frame_src_addr, capability_dict, mac_addr, client_dir, csv_file)
+    text_report(frame_src_addr, mac_oui_manuf, capability_dict, mac_addr, client_dir, csv_file)
     
     return True
 
-def text_report(frame_src_addr, capability_dict, mac_addr, client_dir, csv_file):
+def text_report(frame_src_addr, mac_oui_manuf, capability_dict, mac_addr, client_dir, csv_file):
 
     report_text = ''
 
@@ -341,6 +349,7 @@ def text_report(frame_src_addr, capability_dict, mac_addr, client_dir, csv_file)
     report_text += '\n'
     report_text += '-' * 60
     report_text += "\nClient capabilities report - Client MAC: " + frame_src_addr + "\n"
+    report_text += "(OUI manufacturer lookup: " + (mac_oui_manuf or "Unknown") + ")\n"
     report_text += '-' * 60
     report_text += '\n'
     
@@ -349,7 +358,7 @@ def text_report(frame_src_addr, capability_dict, mac_addr, client_dir, csv_file)
     for key in capabilities:
         report_text += "{:<20} {:<20}".format(key, capability_dict[key]) + "\n"
     
-    report_text += "\n\n" + "* Reported client capabilities are dependant on these features being available from the wireless network at time of client association\n\n"
+    report_text += "\n\n" + "* Reported client capabilities are dependent on these features being available from the wireless network at time of client association\n\n"
     
     print(report_text)
     
@@ -376,14 +385,15 @@ def text_report(frame_src_addr, capability_dict, mac_addr, client_dir, csv_file)
     
         # create file with csv headers
         with open(csv_file, mode='w') as file_obj:
-            writer = csv.DictWriter(file_obj, fieldnames=['Client_Mac'] + capabilities)
+            writer = csv.DictWriter(file_obj, fieldnames=['Client_Mac'] + ['OUI_Manuf'] + capabilities)
             writer.writeheader()
   
     # append data to csv file
     with open(csv_file, mode='a') as file_obj:
-        writer = csv.DictWriter(file_obj, fieldnames=['Client_Mac'] + capabilities)
+        writer = csv.DictWriter(file_obj, fieldnames=['Client_Mac'] + ['OUI_Manuf'] + capabilities)
         writer.writerow({
             'Client_Mac': frame_src_addr,
+            'OUI_Manuf': mac_oui_manuf,
             '802.11k': capability_dict['802.11k'],
             '802.11r': capability_dict['802.11r'],
             '802.11v': capability_dict['802.11v'],
