@@ -25,8 +25,8 @@ import time
 import csv
 import getopt
 
-__author__ = 'Jerry Olla, Nigel Bowden'
-__version__ = '0.2'
+__author__ = 'Jerry Olla, Nigel Bowden, Kobe Watkins'
+__version__ = '0.3'
 __email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
@@ -81,6 +81,9 @@ SUPPORTED_CHANNELS_TAG = "36"
 
 # 802.11n support info
 HT_CAPABILITIES_TAG    = "45"
+
+# 802.11w support info
+RSN_CAPABILITIES_TAG    = "48"
 
 # 802.11r support info
 FT_CAPABILITIES_TAG    = "54"
@@ -268,6 +271,19 @@ def analyze_frame(packet, silent_mode=False):
             if octet3 & bss_trans_support:
                 capability_dict['802.11v'] = 'Supported'
     
+    # check if 11w supported
+    capability_dict['802.11w'] = 'Not reported'
+    if RSN_CAPABILITIES_TAG in dot11_elt_dict.keys():
+    
+        rsn_cap_list = dot11_elt_dict[RSN_CAPABILITIES_TAG]
+
+        rsn_len = len(rsn_cap_list) - 2
+        pmf_oct = rsn_cap_list[rsn_len]
+
+        # bit 8 of 2nd last octet in the rsn capabilites field
+        if 127 <= pmf_oct:
+            capability_dict['802.11w'] = 'Supported'
+
     # check if power capabilites supported
     capability_dict['Max_Power'] = 'Not reported'
     capability_dict['Min_Power'] = 'Not reported'
@@ -278,8 +294,14 @@ def analyze_frame(packet, silent_mode=False):
         max_power = dot11_elt_dict[POWER_MIN_MAX_TAG][1]
         min_power = dot11_elt_dict[POWER_MIN_MAX_TAG][0]
         
+        # check if signed
+        if min_power > 127:
+            signed_min_power = (256-min_power) * (-1)
+        else:
+            signed_min_power = min_power
+        
         capability_dict['Max_Power'] = str(max_power) + " dBm"
-        capability_dict['Min_Power'] = str(min_power) + " dBm"
+        capability_dict['Min_Power'] = str(signed_min_power) + " dBm"
 
     # check supported channels
     if SUPPORTED_CHANNELS_TAG in dot11_elt_dict.keys():
@@ -323,7 +345,7 @@ def text_report(frame_src_addr, capability_dict, mac_addr, client_dir, csv_file)
     report_text += '\n'
     
     # print out capabilities (in nice format)
-    capabilities = ['802.11k', '802.11r', '802.11v', '802.11n', '802.11ac', 'Max_Power', 'Min_Power', 'Supported_Channels']
+    capabilities = ['802.11k', '802.11r', '802.11v', '802.11w', '802.11n', '802.11ac', 'Max_Power', 'Min_Power', 'Supported_Channels']
     for key in capabilities:
         report_text += "{:<20} {:<20}".format(key, capability_dict[key]) + "\n"
     
@@ -365,6 +387,7 @@ def text_report(frame_src_addr, capability_dict, mac_addr, client_dir, csv_file)
             '802.11k': capability_dict['802.11k'],
             '802.11r': capability_dict['802.11r'],
             '802.11v': capability_dict['802.11v'],
+            '802.11w': capability_dict['802.11w'],
             '802.11n': capability_dict['802.11n'],
             '802.11ac': capability_dict['802.11ac'],
             'Max_Power': capability_dict['Max_Power'],
@@ -382,9 +405,9 @@ def get_ie(ap_channel, ap_ssid, ft=True):
     p=p / Dot11Elt(ID=0x46, info="\x02\x00\x00\x00\x00") #RM Enabled Capabilties
     if ft:
         p=p / Dot11Elt(ID=0x36, info="\x45\xc2\x00") #Mobility Domain(802.11r/FT enabled)
-        p=p / Dot11Elt(ID=0x30, info="\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x04\x02\x00\x00\x0f\xac\x02\x00\x0f\xac\x04\x0c\x00") #RSN FT Enabled
+        p=p / Dot11Elt(ID=0x30, info="\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x04\x02\x00\x00\x0f\xac\x02\x00\x0f\xac\x04\x8c\x00") #RSN FT Enabled
     else:
-        p=p / Dot11Elt(ID=0x30, info="\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x02\x00\x00") #RSN FT disabled
+        p=p / Dot11Elt(ID=0x30, info="\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x02\x80\x00") #RSN FT disabled
    
     p=p / Dot11Elt(ID=0xdd, info="\x00\x50\xf2\x02\x01\x01\x8a\x00\x03\xa4\x00\x00\x27\xa4\x00\x00\x42\x43\x5e\x00\x62\x32\x2f\x00") #Vendor specific MS corp. WMM/WME:parameter element
     p=p / Dot11Elt(ID=0x2d, info="\xef\x19\x1b\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00") #HT Capabilities
