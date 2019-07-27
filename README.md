@@ -73,7 +73,7 @@ To trigger client profiling when the script is running:
 
 ```
 Usage:
-    profiler.py")
+
     profiler.py [ -c <channel num> ] [ -s "SSID Name" ] [ -i interface_name ] [ --no11r ]
     profiler.py -h
     profiler.py -v
