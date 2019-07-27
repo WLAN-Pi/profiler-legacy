@@ -88,6 +88,7 @@ RSN_CAPABILITIES_TAG    = "48"
 
 # 802.11r support info
 FT_CAPABILITIES_TAG    = "54"
+FT_REPORTING = True # Toggled by --no11r option
 
 # 802.11k support info
 RM_CAPABILITIES_TAG    = "70"
@@ -114,11 +115,11 @@ oui_lookup = manuf.MacParser()
 # Functions
 ##################
 
-def analyze_frame_cb(self, packet, silent_mode=False):
+def analyze_frame_cb(self, packet):
 
-        analyze_frame(packet, silent_mode)
+        analyze_frame(packet)
 
-def analyze_frame(packet, silent_mode=False):
+def analyze_frame(packet):
   
     # pull off the RadioTap, Dot11 & Dot11AssoReq layers
     dot11 = packet.payload
@@ -256,7 +257,11 @@ def analyze_frame(packet, silent_mode=False):
         capability_dict['802.11k'] = 'Not reported* - treat with caution, many clients lie about this'
 
     # check if 11r supported
-    if FT_CAPABILITIES_TAG in dot11_elt_dict.keys():
+    global FT_REPORTING
+    
+    if FT_REPORTING == False:
+        capability_dict['802.11r'] = 'Reporting disabled (--no11r option used)'
+    elif FT_CAPABILITIES_TAG in dot11_elt_dict.keys():
         capability_dict['802.11r'] = 'Supported'
     else:
         capability_dict['802.11r'] = 'Not reported*'
@@ -562,6 +567,7 @@ def main():
     ap_channel = CHANNEL
     
     ft = True
+    global FT_REPORTING
     
     # Default action run fakeap & analyze assoc req frames
     if len(sys.argv) < 2:
@@ -595,6 +601,7 @@ def main():
                 ap_interface = str(arg)
             elif opt in ("--no11r"):
                 ft = False
+                FT_REPORTING = False
 
     else:
         usage()
