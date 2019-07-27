@@ -8,36 +8,65 @@ The script performs two functions:
 
 Understanding client capabilities is an important aspect of Wireless LAN design. It helps a network designer understand the features that may enabled on a WLAN to optimize the design.
 
-The capabilities supported by each client type may vary enourmously, depending on factors such as the client wirelss chipset, number of antennas, age of the client etc. Each client supplies details of its capabilities as it sends an 802.11 association frame to an access point. By capturing this frame, it is possible to decode and report on the client capabilities. On caveat, however, is that the client will match the capabilites advertised by an access point. For instance, if a 3 stream client detects that the acces point support only 2 streams, it will report that it (the client) only support 2 streams also. 
+The capabilities supported by each client type may vary enormously, depending on factors such as the client wireless chipset, number of antennas, age of the client etc. Each client supplies details of its capabilities as it sends an 802.11 association frame to an access point. By capturing this frame, it is possible to decode and report on the client capabilities. On caveat, however, is that the client will match the capabilities advertised by an access point. For instance, if a 3 stream client detects that the acces point support only 2 streams, it will report that it (the client) only support 2 streams also. 
 
-To get around this shortcoming, this script uses the Python FakeAP module to create a fake AP that advertises that it has the hightest levels of feature set enabled. This fools the client in to revealing its full capabilities, which are then analyzed from the association frame that it uses as it attempts to join the fake AP. It then uses the Scapy module to capture and  analyze the association framse from each client to determie its capabilities.
+To get around this shortcoming, this script uses the Python FakeAP module to create a fake AP that advertises that it has the highest levels of feature set enabled. This fools the client in to revealing its full capabilities, which are then analyzed from the association frame that it uses as it attempts to join the fake AP. It then uses the Scapy module to capture and  analyze the association frames from each client to determine its capabilities.
 
-A textual report is dumped in realtime to stdout and a text file copy is also dumped in to a directory of the WLANPi web directory to allow browsing of reports. In addition, a copy of the association frame is dumped in PCAP file format in to web directory. Each reault is also added to a summary CSV report file that is created for each session when the script is run.
+A textual report is dumped in real-time to stdout and a text file copy is also dumped in to a directory of the WLANPi web directory to allow browsing of reports. In addition, a copy of the association frame is dumped in PCAP file format in to web directory. Each result is also added to a summary CSV report file that is created for each session when the script is run.
 
 Report files are dumped in the following web directories for browsing:
 
-- http://<wlanpi_ip_address>/profiler/clients (on directory per client, with PCAP and text capabuility report dumped in the directory)
+- http://<wlanpi_ip_address>/profiler/clients (on directory per client, with PCAP and text capability report dumped in the directory)
 - http://<wlanpi_ip_address>/profiler/reports (contains a CSV report of all clients for each session when the script is run)
 
-## Using the Script
-To use the script on the WLANPi:
+## Installing the Script
 
-- Open an SSH session to the WLANPi using the 'wlanpi' username, login and create a new directory using the command : mkdir profiler
+(Note that the script is part of standard WLANPi image, so you will generally not need these instructions unless a new script version become available)
+
+To install the script on the WLANPi perform the following steps:
+
+- Download the profiler.py file from the github repo: https://github.com/WLAN-Pi/profiler
+- Open an SSH session to the WLANPi using the 'wlanpi' username, login and create a new directory (if required) using the command : mkdir profiler
 - Change directory to the newly created directory: cd ./profiler
 - Transfer the profiler.py script to the WLANPi (e.g. using SFTP)
 - Make the script executable with "chmod a+x profiler.py"
 - Ensure that a USB wireless adapter that support monitor mode (e.g. Comfast CF-912AC) is plugged in to the WLANPi
-- Run the script using the command : ./profiler.py -c 36 -s "My_SSID" (enter the root password when prompted)
 
-The script will run continuously, listening for association requests and analyzing the client capabilites in realtime. To end the script, hit "Ctrl-c". Leave the script running while testing clients.
+### MAC OUI Database Update
 
-To trigger client profiling:
+From version 0.03 of the script, a MAC OUI lookup is included in the reports to show the manufacturer of the client based on the 6-byte MAC OUI. This feature is provided by a Python module called "manuf". It uses a local MAC OUI database file to lookup OUI information. An OUI lookup file is provided with the module, though it may be quite old, depending on the date of the last update of the module code.
+
+If you find some devices are not reporting a manufacturer, the OUI DB file may need an update. To update the manuf OUI DB file, perform the following steps from the CLI of the WLANPi:
+
+- Ensure the WLANPi is connected to a network with Internet access
+- SSH to the WLANPi
+- Perform the following commands:
+
+```
+ cd /usr/local/lib/python2.7/dist-packages/manuf
+ python manuf.py --update
+```
+
+There are no outputs provided to indicate when/if the update has been successful, so I suggest only performing this step if absolutely necessary. If errors reported by the profiler script after running the update, try running the update again, as this operation seems a little "variable" in its sucess rate.
+
+## Running the Script
+
+The script is run from the CLI of the WLANPi. To run the profiler, SSH to the WLANPi and run the script, for example:
+
+```
+ cd /home/wlanpi/profiler
+ ./profiler.py -c 36 (enter the root password when prompted)
+```
+
+The script will run continuously, listening for association requests and analyzing the client capabilities in realtime. To end the script, hit "Ctrl-c". Leave the script running while testing clients.
+
+To trigger client profiling when the script is running:
 
 - Fire up the client(s) to test
 - Search for the SSID configured on the fake AP
 - Attempt to join the fake AP SSID from the test client
 - When prompted, enter a random PSK on the client under test (any string of 8 or more characters will do)
-- After a few seconds, a textual report will (hopefully) be displayed in SSH session already established to the WLAN Pi as it tries to associate. Note the client will not join the fake AP SSID.
+- After a few seconds, a textual report will (hopefully) be displayed in SSH session already established to the WLAN Pi as it tries to associate. (Note that the client will not join the fake AP SSID.)
 - Once clients have been tested and successfully triggered a client report, the captured association frame is dumped in to a PCAP file (browse to "http://<ip_address_of_wlanpi>/profiler" to see PCAP dumps and text reports)
 
 ## Usage
