@@ -55,7 +55,7 @@ The script is run from the CLI of the WLANPi. To run the profiler, SSH to the WL
 
 ```
  cd /home/wlanpi/profiler
- ./profiler.py -c 36 (enter the root password when prompted)
+ sudo ./profiler.py -c 36 (enter the root password when prompted)
 ```
 
 The script will run continuously, listening for association requests and analyzing the client capabilities in realtime. To end the script, hit "Ctrl-c". Leave the script running while testing clients.
@@ -119,4 +119,6 @@ wlanpi@wlanpi:/home/wlanpi/profiler# sudo python ./profiler.py -c 100 -s "Profil
 
 ## Credits
 This project is a spin-off of the wlan-client=capability project. Full details of the previous project can be found at: [https://github.com/wifinigel/wlan-client-capability]
+
+Thanks to Kobe Watkins for the code to add 802.11w support to the profiler in version 0.03. Much appreciated! :)
 
