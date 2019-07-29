@@ -109,7 +109,7 @@ time_now = time.strftime("%Y-%m-%d-%H-%M-%S")
 csv_file = DIRS['reports_dir'] + '/db-' + time_now + '.csv'
 
 # Setup up our MAC OUI lookup
-oui_lookup = manuf.MacParser()
+oui_lookup = manuf.MacParser(manuf_name="/usr/local/lib/python2.7/dist-packages/manuf/manuf", update=False)
 
 ##################
 # Functions
