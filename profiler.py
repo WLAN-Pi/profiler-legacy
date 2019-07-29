@@ -27,7 +27,7 @@ import getopt
 from manuf import manuf
 
 __author__ = 'Jerry Olla, Nigel Bowden, Kobe Watkins'
-__version__ = '0.3'
+__version__ = '0.3a'
 __email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
