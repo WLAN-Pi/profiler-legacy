@@ -77,7 +77,7 @@ Options are provided to start, stop and view the status of the profiler. Once th
 
 (Note: there is also an option to start the profiler with no 802.11r information elements being included in beacons. This will help with clients that are sensitive to 802.11r and will not attempt to associate when they see the 802.11r IEs)
 
-![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/images/profiler_status.png)
+![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/images/profiler_status.jpg)
 
 ### Configuration
 
