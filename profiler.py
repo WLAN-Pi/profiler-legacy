@@ -25,9 +25,10 @@ import time
 import csv
 import getopt
 from manuf import manuf
+import ConfigParser
 
 __author__ = 'Jerry Olla, Nigel Bowden, Kobe Watkins'
-__version__ = '0.3a'
+__version__ = '0.4'
 __email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
@@ -61,7 +62,30 @@ for dir_key in ['dump_dir', 'clients_dir', 'reports_dir']:
             print("Exiting...")
             sys.exit()
 
+######################################################################################
+# Figure out what our config file will be called (config.ini in same dir as script)
+######################################################################################
+
+config_file = os.path.dirname(os.path.realpath(__file__)) + "/config.ini"
+
+# If file exists, read values in and over-ride the defaults at the top of this script
+if os.path.isfile(config_file):
+
+    config = ConfigParser.SafeConfigParser()
+    config.read(config_file)
+
+    if config.has_option('General', 'channel'):
+        CHANNEL = int(config.get('General', 'channel'))
+
+    if config.has_option('General', 'ssid'):
+        SSID = config.get('General', 'ssid')
+
+    if config.has_option('General', 'interface'):
+        INTERFACE = config.get('General', 'interface')
+
+###################################################
 # figure out the dest address for this SSH session
+###################################################
 netstat_output = subprocess.check_output("netstat -tnpa | grep 'ESTABLISHED.*sshd'", shell=True)
 dest_ip_re = re.search('(\d+?\.\d+?\.\d+?\.\d+?)\:22', netstat_output)
 
@@ -69,6 +93,12 @@ if dest_ip_re is None:
     SSH_DEST_IP = False
 else:            
     SSH_DEST_IP = dest_ip_re.group(1)
+
+# Switch off menu mode reporting by default
+MENU_REPORTING = False
+MENU_REPORT_FILE = '/tmp/profiler_menu_report.txt'
+CLIENT_COUNT = 0
+LAST_MANUF = ''
 
 ######################################
 #  assoc req frame tag list numbers
@@ -115,11 +145,29 @@ oui_lookup = manuf.MacParser(manuf_name="/usr/local/lib/python2.7/dist-packages/
 # Functions
 ##################
 
+def generate_menu_report(CHANNEL, FT_REPORTING, SSID, CLIENT_COUNT, LAST_MANUF):
+    
+    global MENU_REPORT_FILE
+        
+    status = 'Status: running\r'
+    channel = "Ch:{} 11r:{}\r".format(CHANNEL, FT_REPORTING)
+    ssid = "SSID: {}\r".format(SSID)
+    clients = "Clients:{} ({})".format(CLIENT_COUNT, LAST_MANUF)
+        
+    # create file and dump info
+    f = open(MENU_REPORT_FILE, "w")
+    f.writelines([status, channel, ssid, clients])
+    f.close()
+
 def analyze_frame_cb(self, packet):
 
         analyze_frame(packet)
 
 def analyze_frame(packet):
+
+    global CLIENT_COUNT
+    global LAST_MANUF
+    global FT_REPORTING
   
     # pull off the RadioTap, Dot11 & Dot11AssoReq layers
     dot11 = packet.payload
@@ -130,13 +178,15 @@ def analyze_frame(packet):
         # already analysed this client, moving on
         print("Detected " + str(frame_src_addr) + " again, ignoring..." )
         return(False)
+        
+    CLIENT_COUNT +=1
     
     # add client to detected clients list
     detected_clients.append(frame_src_addr)
     
     # lookup client OUI
     mac_oui_manuf = oui_lookup.get_manuf(frame_src_addr)
-    
+    LAST_MANUF = mac_oui_manuf
     
     # get mac address in dashed format to use later
     mac_addr = frame_src_addr.replace(':', '-', 5)
@@ -343,6 +393,10 @@ def analyze_frame(packet):
     
     # print our report to stdout
     text_report(frame_src_addr, mac_oui_manuf, capability_dict, mac_addr, client_dir, csv_file)
+    
+    # if we're running in menu mode, create temp report
+    if MENU_REPORTING == True:
+        generate_menu_report(CHANNEL, FT_REPORTING, SSID, CLIENT_COUNT, LAST_MANUF)
     
     return True
 
@@ -568,6 +622,9 @@ def main():
     
     ft = True
     global FT_REPORTING
+    global MENU_REPORTING
+    global MENU_REPORT_FILE
+    global CLIENT_COUNT
     
     # Default action run fakeap & analyze assoc req frames
     if len(sys.argv) < 2:
@@ -578,9 +635,9 @@ def main():
     elif len(sys.argv) >= 2:    
    
         try:
-            opts, args = getopt.getopt(sys.argv[1:],'c:s:i:hv', ['no11r', 'clean', 'help'])
+            opts, args = getopt.getopt(sys.argv[1:],'c:s:i:hv', ['no11r', 'clean', 'help', 'menu_mode'])
         except getopt.GetoptError:
-            print("\nOops...syntaxt error, please re-check: \n")
+            print("\nOops...syntax error, please re-check: \n")
             usage()
         
         for opt, arg in opts:
@@ -602,6 +659,8 @@ def main():
             elif opt in ("--no11r"):
                 ft = False
                 FT_REPORTING = False
+            elif opt in ("--menu_mode"):
+                MENU_REPORTING = True
 
     else:
         usage()
@@ -626,6 +685,10 @@ def main():
             print("Error setting wlan interface config:")
             print(ex)
             sys.exit()
+
+    # initialize the menu report file if required
+    if MENU_REPORTING == True:
+        generate_menu_report(CHANNEL, FT_REPORTING, SSID, CLIENT_COUNT, 'N/A')
 
     # run the fakeap
     run_msg(ap_interface, ap_ssid, ap_channel)
