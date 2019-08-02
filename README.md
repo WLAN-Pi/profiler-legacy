@@ -25,10 +25,10 @@ Report files are dumped in the following web directories for browsing:
 
 To install the script on the WLANPi perform the following steps:
 
-- Download the profiler.py file from the github repo: https://github.com/WLAN-Pi/profiler
+- Download the profiler.py and config.ini file from the github repo: https://github.com/WLAN-Pi/profiler
 - Open an SSH session to the WLANPi using the 'wlanpi' username, login and create a new directory (if required) using the command : mkdir profiler
 - Change directory to the newly created directory: cd ./profiler
-- Transfer the profiler.py script to the WLANPi (e.g. using SFTP)
+- Transfer the profiler.py script and config.ini files to the WLANPi (e.g. using SFTP)
 - Make the script executable with "chmod a+x profiler.py"
 - Ensure that a USB wireless adapter that support monitor mode (e.g. Comfast CF-912AC) is plugged in to the WLANPi
 
@@ -49,25 +49,47 @@ If you find some devices are not reporting a manufacturer, the OUI DB file may n
 
 There are no outputs provided to indicate when/if the update has been successful, so I suggest only performing this step if absolutely necessary. If errors reported by the profiler script after running the update, try running the update again, as this operation seems a little "variable" in its sucess rate.
 
-## Running the Script
+## Running the Script (CLI)
 
-The script is run from the CLI of the WLANPi. To run the profiler, SSH to the WLANPi and run the script, for example:
+The script cab be run from the CLI of the WLANPi. To run the profiler, SSH to the WLANPi and run the script, for example:
 
 ```
  cd /home/wlanpi/profiler
  sudo ./profiler.py -c 36 (enter the root password when prompted)
 ```
 
-The script will run continuously, listening for association requests and analyzing the client capabilities in realtime. To end the script, hit "Ctrl-c". Leave the script running while testing clients.
+The script will run continuously, listening for association requests, analyzing the client capabilities in realtime. To end the script, hit "Ctrl-c". Leave the script running while testing clients.
 
 To trigger client profiling when the script is running:
 
 - Fire up the client(s) to test
-- Search for the SSID configured on the fake AP
+- Search for the SSID configured on the fake AP ("WLAN Pi" by default)
 - Attempt to join the fake AP SSID from the test client
 - When prompted, enter a random PSK on the client under test (any string of 8 or more characters will do)
 - After a few seconds, a textual report will (hopefully) be displayed in SSH session already established to the WLAN Pi as it tries to associate. (Note that the client will not join the fake AP SSID.)
 - Once clients have been tested and successfully triggered a client report, the captured association frame is dumped in to a PCAP file (browse to "http://<ip_address_of_wlanpi>/profiler" to see PCAP dumps and text reports)
+
+## Running the Script (Front Panel Menu System)
+
+From version v0.21 of the WLANPi FPMS, it is possible to launch the profiler script using the front panel keys of the WLANPi. The required option can be found at : Home -> 3.Apps -> 3.Profiler
+
+Options are provided to start, stop and view the status of the profiler. Once the profiler has been started, the status option will show the channel, SSID and client count of detected clients. Operation is as per the CLI mode of operation described in the previous section, with reports being generated and visible from the WLANPi web GUI.
+
+(Note: there is also an option to start the profiler with no 802.11r information elements being included in beacons. This will help with clients that are sensitive to 802.11r and will not attempt to associate when they see the 802.11r IEs)
+
+![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/images/profiler_status.png)
+
+### Configuration
+
+To change the default operation of the script, for example to change the channel used), a "config.ini" can be found in the same directory as the profiler script (/home/wlanpi/profiler). By editing the parameters in this file, the operation of the fake AP created by the script may be modified. Note that if any changes are made, the profiler process will need to be stopped & started for the new settings to take effect. 
+
+The configuration file may be updated by opening an SSH session to the WLANPi, then luanching the nano editor:
+
+```
+ nano /home/wlanpi/config.ini
+```
+
+Once changes have been made, hit Ctrl-X to exit the editor & save the changes.
 
 ## Usage
 
@@ -110,7 +132,7 @@ wlanpi@wlanpi:/home/wlanpi/profiler# sudo python ./profiler.py -c 100 -s "Profil
 
 ## Screenshot
 
-![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/screenshot1.png)
+![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/images/screenshot1.png)
 
 ## Caveats
 - Note that this is work in progress and is not guaranteed to report accurate info (despite our best efforts). **You have been warned**
