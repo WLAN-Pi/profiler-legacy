@@ -28,14 +28,14 @@ from manuf import manuf
 import ConfigParser
 
 __author__ = 'Jerry Olla, Nigel Bowden, Kobe Watkins'
-__version__ = '0.4'
+__version__ = '0.05'
 __email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
 # we must be root to run this script - exit with msg if not
 if not os.geteuid()==0:
     print("\n#####################################################################################")
-    print("You must be root to run this script (use 'sudo wlan_client_capability.py') - exiting" )
+    print("You must be root to run this script (use 'sudo profiler.py') - exiting" )
     print("#####################################################################################\n")
     sys.exit()
 
@@ -86,8 +86,12 @@ if os.path.isfile(config_file):
 ###################################################
 # figure out the dest address for this SSH session
 ###################################################
-netstat_output = subprocess.check_output("netstat -tnpa | grep 'ESTABLISHED.*sshd'", shell=True)
-dest_ip_re = re.search('(\d+?\.\d+?\.\d+?\.\d+?)\:22', netstat_output)
+try:
+    netstat_output = subprocess.check_output("netstat -tnpa | grep 'ESTABLISHED.*sshd'", shell=True)
+    dest_ip_re = re.search('(\d+?\.\d+?\.\d+?\.\d+?)\:22', netstat_output)
+except Exception as ex:
+    print("Netstat for SSH session failed - expected when launched from front panel menu")
+    dest_ip_re = None
 
 if dest_ip_re is None:
     SSH_DEST_IP = False
