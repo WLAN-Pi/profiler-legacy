@@ -28,7 +28,7 @@ from manuf import manuf
 import ConfigParser
 
 __author__ = 'Jerry Olla, Nigel Bowden, Kobe Watkins'
-__version__ = '0.05'
+__version__ = '0.06'
 __email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
@@ -103,6 +103,7 @@ MENU_REPORTING = False
 MENU_REPORT_FILE = '/tmp/profiler_menu_report.txt'
 CLIENT_COUNT = 0
 LAST_MANUF = ''
+NO_AP = False
 
 ######################################
 #  assoc req frame tag list numbers
@@ -172,6 +173,15 @@ def analyze_frame(packet):
     global CLIENT_COUNT
     global LAST_MANUF
     global FT_REPORTING
+    
+    # If we're not running the fake AP, make sure we only let through assoc req frames
+    if NO_AP == True:
+    
+        if not packet.haslayer(Dot11):    
+            return(False)
+
+        if not packet.haslayer(Dot11AssoReq):
+            return(False)
   
     # pull off the RadioTap, Dot11 & Dot11AssoReq layers
     dot11 = packet.payload
@@ -404,6 +414,11 @@ def analyze_frame(packet):
     
     return True
 
+def PktHandler(frame):
+
+    analyze_frame(frame)
+
+
 def text_report(frame_src_addr, mac_oui_manuf, capability_dict, mac_addr, client_dir, csv_file):
 
     report_text = ''
@@ -553,21 +568,30 @@ def run_fakeap(ap_interface, ap_ssid, ap_channel, ft):
 def run_msg(ap_interface, ap_ssid, ap_channel):
 
     global SSH_DEST_IP
-
-    print("\n" + "-" * 44)
-    print("Profiler AP Started \n")
-    print("SSID: {} ".format(ap_ssid))
-    print("PSK: 12345678")
-    print("Channel: {}".format(ap_channel))
-    print("Interface: {}".format(ap_interface))
-    if SSH_DEST_IP:
-        print("Results: http://{}/profiler/".format(SSH_DEST_IP))
-    print("-" * 44)
-    print("\n####################################################################################################")
-    print("Connect a Wi-Fi client to SSID:",ap_ssid, "enter any random 8 characters for the PSK")
-    print("we don't really need the device to associate, we only need get the client to send an association request")
-    print("####################################################################################################\n")
-
+    
+    if NO_AP == True:    
+        print("\n" + "-" * 44)
+        print("Listening for association frames...")
+        print("Channel: {}".format(ap_channel))
+        print("Interface: {}".format(ap_interface))
+        if SSH_DEST_IP:
+            print("Results: http://{}/profiler/".format(SSH_DEST_IP))
+        print("-" * 44 + '\n')
+        
+    else:
+        print("\n" + "-" * 44)
+        print("Profiler AP Started \n")
+        print("SSID: {} ".format(ap_ssid))
+        print("PSK: 12345678")
+        print("Channel: {}".format(ap_channel))
+        print("Interface: {}".format(ap_interface))
+        if SSH_DEST_IP:
+            print("Results: http://{}/profiler/".format(SSH_DEST_IP))
+        print("-" * 44)
+        print("\n####################################################################################################")
+        print("Connect a Wi-Fi client to SSID:",ap_ssid, "enter any random 8 characters for the PSK")
+        print("we don't really need the device to associate, we only need get the client to send an association request")
+        print("####################################################################################################\n")
 
 
 def my_recv_pkt(self, packet):  # We override recv_pkt to include a trigger for our callback
@@ -594,6 +618,7 @@ def usage():
     print("    -i       Sets name of fake AP wireless interface on WLANPi")
     print("    -h       Prints help page")
     print("   --no11r   Disables 802.111r information elements")
+    print("   --noAP    Disables fake AP and just listens for assoc req frames")
     print("   --help    Prints help page")
     print("   --clean   Cleans out all CSV report files\n\n")
     sys.exit()
@@ -629,6 +654,7 @@ def main():
     global MENU_REPORTING
     global MENU_REPORT_FILE
     global CLIENT_COUNT
+    global NO_AP
     
     # Default action run fakeap & analyze assoc req frames
     if len(sys.argv) < 2:
@@ -639,7 +665,7 @@ def main():
     elif len(sys.argv) >= 2:    
    
         try:
-            opts, args = getopt.getopt(sys.argv[1:],'c:s:i:hv', ['no11r', 'clean', 'help', 'menu_mode'])
+            opts, args = getopt.getopt(sys.argv[1:],'c:s:i:hv', ['no11r', 'clean', 'help', 'menu_mode', 'noAP'])
         except getopt.GetoptError:
             print("\nOops...syntax error, please re-check: \n")
             usage()
@@ -665,6 +691,8 @@ def main():
                 FT_REPORTING = False
             elif opt in ("--menu_mode"):
                 MENU_REPORTING = True
+            elif opt in ("--noAP"):
+                NO_AP = True
 
     else:
         usage()
@@ -694,9 +722,16 @@ def main():
     if MENU_REPORTING == True:
         generate_menu_report(CHANNEL, FT_REPORTING, SSID, CLIENT_COUNT, 'N/A')
 
-    # run the fakeap
-    run_msg(ap_interface, ap_ssid, ap_channel)
-    run_fakeap(ap_interface, ap_ssid, ap_channel, ft)
+    if NO_AP == True:
+    
+        # no fake AP, just listen for assoc req frames
+        run_msg(ap_interface, "", ap_channel)
+        sniff(iface=ap_interface, prn=PktHandler)
+    else:
+
+        # run the fakeap
+        run_msg(ap_interface, ap_ssid, ap_channel)
+        run_fakeap(ap_interface, ap_ssid, ap_channel, ft)
     
        
 if __name__ == "__main__":
