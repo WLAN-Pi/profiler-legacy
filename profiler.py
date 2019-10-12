@@ -26,6 +26,7 @@ import csv
 import getopt
 from manuf import manuf
 import ConfigParser
+from pprint import pprint
 
 __author__ = 'Jerry Olla, Nigel Bowden, Kobe Watkins'
 __version__ = '0.06'
@@ -104,6 +105,7 @@ MENU_REPORT_FILE = '/tmp/profiler_menu_report.txt'
 CLIENT_COUNT = 0
 LAST_MANUF = ''
 NO_AP = False
+FILE_ONLY = False
 
 ######################################
 #  assoc req frame tag list numbers
@@ -133,6 +135,10 @@ EXT_CAPABILITIES_TAG   = "127"
 
 # 802.11ac support info
 VHT_CAPABILITIES_TAG   = "191"
+
+# Extended Tags
+EXT_IE_TAG = "255"
+
 
 # list of detected clients
 detected_clients = []
@@ -295,8 +301,8 @@ def analyze_frame(packet):
         # check for SU & MU beam formee support
         mu_octet = dot11_elt_dict[VHT_CAPABILITIES_TAG][2]
         su_octet = dot11_elt_dict[VHT_CAPABILITIES_TAG][1]
-        
-        beam_form_mask = 8
+
+        beam_form_mask = 16
         
         # bit 4 indicates support for both octets (1 = supported, 0 = not supported) 
         if (su_octet & beam_form_mask):
@@ -405,6 +411,19 @@ def analyze_frame(packet):
     else:
         capability_dict['Supported_Channels'] =  "Not reported"
     
+    # check for Ext tags (e.g. 802.11ax draft support)
+    capability_dict['802.11ax_draft'] = 'Not Supported'
+    
+    if EXT_IE_TAG in dot11_elt_dict.keys():
+    
+        ext_ie_id = str(dot11_elt_dict[EXT_IE_TAG][0])
+        
+        dot11ax_draft_ids = { "35": "802.11ax (Draft)"}
+        
+        # check for 802.11ax support
+        if ext_ie_id in dot11ax_draft_ids.keys():
+            capability_dict['802.11ax_draft'] = 'Supported (Draft)'
+    
     # print our report to stdout
     text_report(frame_src_addr, mac_oui_manuf, capability_dict, mac_addr, client_dir, csv_file)
     
@@ -432,7 +451,7 @@ def text_report(frame_src_addr, mac_oui_manuf, capability_dict, mac_addr, client
     report_text += '\n'
     
     # print out capabilities (in nice format)
-    capabilities = ['802.11k', '802.11r', '802.11v', '802.11w', '802.11n', '802.11ac', 'Max_Power', 'Min_Power', 'Supported_Channels']
+    capabilities = ['802.11k', '802.11r', '802.11v', '802.11w', '802.11n', '802.11ac', '802.11ax_draft', 'Max_Power', 'Min_Power', 'Supported_Channels']
     for key in capabilities:
         report_text += "{:<20} {:<20}".format(key, capability_dict[key]) + "\n"
     
@@ -478,6 +497,7 @@ def text_report(frame_src_addr, mac_oui_manuf, capability_dict, mac_addr, client
             '802.11w': capability_dict['802.11w'],
             '802.11n': capability_dict['802.11n'],
             '802.11ac': capability_dict['802.11ac'],
+            '802.11ax_draft': capability_dict['802.11ax_draft'],
             'Max_Power': capability_dict['Max_Power'],
             'Min_Power': capability_dict['Min_Power'],
             'Supported_Channels': capability_dict['Supported_Channels']
@@ -607,6 +627,7 @@ def usage():
     print("\n Usage:\n")
     print("    profiler.py")
     print('    profiler.py [ -c <channel num> ] [ -s "SSID Name" ] [ -i interface_name ] [ --no11r ]')
+    print("    profiler.py -f <pcap filename>")
     print("    profiler.py -h")
     print("    profiler.py -v")
     print("    profiler.py --help")
@@ -616,6 +637,7 @@ def usage():
     print("    -c       Sets channel for fake AP")
     print("    -s       Sets name of fake AP SSID")
     print("    -i       Sets name of fake AP wireless interface on WLANPi")
+    print("    -f       Read pcap file of assoc frame")
     print("    -h       Prints help page")
     print("   --no11r   Disables 802.111r information elements")
     print("   --noAP    Disables fake AP and just listens for assoc req frames")
@@ -655,6 +677,7 @@ def main():
     global MENU_REPORT_FILE
     global CLIENT_COUNT
     global NO_AP
+    global FILE_ONLY
     
     # Default action run fakeap & analyze assoc req frames
     if len(sys.argv) < 2:
@@ -665,7 +688,7 @@ def main():
     elif len(sys.argv) >= 2:    
    
         try:
-            opts, args = getopt.getopt(sys.argv[1:],'c:s:i:hv', ['no11r', 'clean', 'help', 'menu_mode', 'noAP'])
+            opts, args = getopt.getopt(sys.argv[1:],'c:s:i:f:hv', ['no11r', 'clean', 'help', 'menu_mode', 'noAP'])
         except getopt.GetoptError:
             print("\nOops...syntax error, please re-check: \n")
             usage()
@@ -693,6 +716,9 @@ def main():
                 MENU_REPORTING = True
             elif opt in ("--noAP"):
                 NO_AP = True
+            elif opt in ("-f"):
+                FILE_ONLY = True
+                pcap_file = str(arg)
 
     else:
         usage()
@@ -727,6 +753,18 @@ def main():
         # no fake AP, just listen for assoc req frames
         run_msg(ap_interface, "", ap_channel)
         sniff(iface=ap_interface, prn=PktHandler)
+
+    elif FILE_ONLY == True:
+
+        # read in the pcap file
+        frame = rdpcap(pcap_file)
+
+        # extract the first frame object
+        assoc_req_frame = frame[0]
+
+        # perform analysis
+        analyze_frame(assoc_req_frame)
+
     else:
 
         # run the fakeap
