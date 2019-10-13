@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# FIXME: Turn this script in to one or more modules to ensure we have a byte-code
+#        compiled verion of the script to reduce load times
 
 ########################################################################
 # define fake AP parameters
@@ -10,6 +12,15 @@ INTERFACE = 'wlan0'
 #
 ########################################################################
 
+# we must be root to run this script - exit with msg if not
+import os
+import sys
+if not os.geteuid()==0:
+    print("\n#####################################################################################")
+    print("You must be root to run this script (use 'sudo profiler.py') - exiting" )
+    print("#####################################################################################\n")
+    sys.exit()
+
 #import libraries
 from fakeap import *
 from fakeap.constants import *
@@ -19,26 +30,23 @@ from scapy.layers.dot11 import *
 
 import subprocess
 from types import MethodType
-import sys
-import os
+
 import time
 import csv
 import getopt
 from manuf import manuf
 import ConfigParser
-from pprint import pprint
+# FIXME: Move CLI processing up to here and perform conditional loading of modules to speed
+#        up load time. For example -h does not require all of these modules being loaded. I 
+#        the fakeap and oui lookup modules are bad offenders for causing very slow load times
+#        for the script.
 
 __author__ = 'Jerry Olla, Nigel Bowden, Kobe Watkins'
 __version__ = '0.06'
 __email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
-# we must be root to run this script - exit with msg if not
-if not os.geteuid()==0:
-    print("\n#####################################################################################")
-    print("You must be root to run this script (use 'sudo profiler.py') - exiting" )
-    print("#####################################################################################\n")
-    sys.exit()
+
 
 ################################
 # Set up working directories
@@ -62,6 +70,8 @@ for dir_key in ['dump_dir', 'clients_dir', 'reports_dir']:
             print("Trying to create directory: {} but having an issue: {}".format(dest_dir, ex))
             print("Exiting...")
             sys.exit()
+# FIXME: Move these directory defitnitions in to the external config file
+#        for future flexibility
 
 ######################################################################################
 # Figure out what our config file will be called (config.ini in same dir as script)
@@ -85,7 +95,8 @@ if os.path.isfile(config_file):
         INTERFACE = config.get('General', 'interface')
 
 ###################################################
-# figure out the dest address for this SSH session
+# figure out the dest address for this SSH session 
+# (Gives us the IP address for the WLANPi Web GUI)
 ###################################################
 try:
     netstat_output = subprocess.check_output("netstat -tnpa | grep 'ESTABLISHED.*sshd'", shell=True)
@@ -101,7 +112,7 @@ else:
 
 # Switch off menu mode reporting by default
 MENU_REPORTING = False
-MENU_REPORT_FILE = '/tmp/profiler_menu_report.txt'
+MENU_REPORT_FILE = '/tmp/profiler_menu_report.txt' # FIXME: Move this to the external config file
 CLIENT_COUNT = 0
 LAST_MANUF = ''
 NO_AP = False
@@ -151,10 +162,19 @@ csv_file = DIRS['reports_dir'] + '/db-' + time_now + '.csv'
 
 # Setup up our MAC OUI lookup
 oui_lookup = manuf.MacParser(manuf_name="/usr/local/lib/python2.7/dist-packages/manuf/manuf", update=False)
+# FIXME: Suspect this module causes extended load times as it loads the whole
+#        OUI db file each time. Need to moved to solution to read the DB in to
+#        an sqlite DB the first time the script runs. Then just look up OUIs
+#        as required. Adding a cache for popular OUIs in addition could also
+#        help. Would need to check the timestamp of the OUI db file each time
+#        check if it has changed since he last run in case we need to update
+#        the sqlite DB.
 
 ##################
 # Functions
 ##################
+# FIXME: Add some comments to describe the function and operation of each
+#        of these functions
 
 def generate_menu_report(CHANNEL, FT_REPORTING, SSID, CLIENT_COUNT, LAST_MANUF):
     
@@ -423,6 +443,9 @@ def analyze_frame(packet):
         # check for 802.11ax support
         if ext_ie_id in dot11ax_draft_ids.keys():
             capability_dict['802.11ax_draft'] = 'Supported (Draft)'
+    # FIXME: Need to add more 11ax detection features and add them in to the 
+    #        report. For example: support for OFDMA UL, OFDMA DL, MU-MIMO UL
+    #        MU-MIMO DL, BSS Colouring etc.
     
     # print our report to stdout
     text_report(frame_src_addr, mac_oui_manuf, capability_dict, mac_addr, client_dir, csv_file)
@@ -582,7 +605,7 @@ def run_fakeap(ap_interface, ap_ssid, ap_channel, ft):
     ap.channel = ap_channel
     
     # lower the beacon interval used to account for execution time of script
-    ap.beaconTransmitter.interval = 0.015
+    ap.beaconTransmitter.interval = 0.020
     ap.run()
 
 def run_msg(ap_interface, ap_ssid, ap_channel):
@@ -722,6 +745,11 @@ def main():
 
     else:
         usage()
+    # FIXME: Move the CLI parameters processing to the start of the script to 
+    #        allow conditional loading of modules. Not all options require fake
+    #        AP to be loaded (as an example). Once options have been processed,
+    #        set global variables to check modeules/options required (many of
+    #        these already exist)
     
     ##########################
     # set up the WLAN adapter
