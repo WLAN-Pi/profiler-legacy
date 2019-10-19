@@ -220,3 +220,4 @@ Thanks also to Philipp Ebbecke for spotting the 11ac capabilities bug which got 
 - v0.03 (July 2019):
    - Added 11w support (Thanks Kobe!)
    - Added MAC OUI lookup support
+
