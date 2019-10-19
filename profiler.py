@@ -650,6 +650,7 @@ def usage():
     print("\n Usage:\n")
     print("    profiler.py")
     print('    profiler.py [ -c <channel num> ] [ -s "SSID Name" ] [ -i interface_name ] [ --no11r ]')
+    print('    profiler.py --noAP -c <channel num>')
     print("    profiler.py -f <pcap filename>")
     print("    profiler.py -h")
     print("    profiler.py -v")

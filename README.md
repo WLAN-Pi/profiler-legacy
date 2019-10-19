@@ -19,16 +19,19 @@ Report files are dumped in the following web directories for browsing:
 - http://<wlanpi_ip_address>/profiler/clients (on directory per client, with PCAP and text capability report dumped in the directory)
 - http://<wlanpi_ip_address>/profiler/reports (contains a CSV report of all clients for each session when the script is run)
 
-## Installing the Script
+## Upgrading the Script
 
-(Note that the script is part of standard WLANPi image, so you will generally not need these instructions unless a new script version becomes available)
+To upgrade from version v0.05 to v0.06, copy the 'profiler.py' from this repo to the '/home/wlanpi/profiler/' directory of your WLANPi. If yu are running a version older than v0.05, you will need to follow the full install process outlined below - it's probably quicker to update your WLANPi image. 
+
+## Installing The Script From Scratch
+
+(Note that the script is part of standard WLANPi image, so you will generally not need these instructions unless a new script version becomes available. To check your current script version, SSH to your WLANPi and run the command "sudo /home/wlanpi/profiler/profiler.py -v")
 
 ### Pre-requisites
 
-The Profiler script can be run from the CLI of the WLANPi using the steps outline in the next section. However, if you would like to also take advantage of using the front panel menu controls, you will need to also install the files from the following two projects:
+The Profiler script can be run from the CLI of the WLANPi using the steps outline in the next section. However, if you would like to also take advantage of using the front panel menu controls, you will need to also install the files from the following project:
 
 - [wlanpi-nanohat-oled](https://github.com/WLAN-Pi/wlanpi-nanohat-oled) (v0.21 or better)
-- [wlanpi-nanohat-oled-scripts](https://github.com/WLAN-Pi/wlanpi-nanohat-oled-scripts) (v0.02 or better)
 
 Each project has its own install instructions, but is generally just a simple file copy operation. (Apologies if this seems a but clunky - it is. We'll consolidate this at some point in the near future to make things easier)
 
@@ -97,6 +100,9 @@ To trigger client profiling when the script is running:
 - After a few seconds, a textual report will (hopefully) be displayed in the SSH session already established to the WLAN Pi as it tries to associate. (Note that the client will not actually join the fake AP SSID.)
 - Once clients have been tested and successfully triggered a client report, the captured association frame is dumped in to a PCAP file for your reference (browse to "http://<ip_address_of_wlanpi>/profiler" to see PCAP dumps and text reports)
 
+(Note: From verion 0.06, it is possible to run on the CLI with the "--NoAP" option to just listen to association requests and not fire up the fake AP. In this instance, you will
+need to have an AP on your own running on the channel you wish to test on.)
+
 ## Running the Script (Front Panel Menu System)
 
 From version v0.21 of the WLANPi FPMS, it is possible to launch the profiler script using the front panel keys of the WLANPi, so that no CLI interaction is required - all that is required is to start the Profiler process via the buttons, then view the web reports as clients are detected. The required option can be found on the front panel menu system at : Home -> 3.Apps -> 3.Profiler
@@ -130,21 +136,29 @@ Note that this configuration file has been provided to make it easier to change 
 ## Usage
 
 ```
-Usage:
+ Usage:
 
+    profiler.py
     profiler.py [ -c <channel num> ] [ -s "SSID Name" ] [ -i interface_name ] [ --no11r ]
+    profiler.py --noAP -c <channel num>
+    profiler.py -f <pcap filename>
     profiler.py -h
     profiler.py -v
     profiler.py --help
     profiler.py --clean  (Clean out old CSV reports)
-    
-Command line options:
 
-        -h       Shows help
-        -c       Sets channel for fake AP
-        -s       Sets name of fake AP SSID
-        -i       Sets name of fake AP wireless interface on WLANPi
-       --no11r   Disables 802.111r information elements
+ Command line options:
+
+    -h       Shows help
+    -c       Sets channel for fake AP
+    -s       Sets name of fake AP SSID
+    -i       Sets name of fake AP wireless interface on WLANPi
+    -f       Read pcap file of assoc frame
+    -h       Prints help page
+   --no11r   Disables 802.111r information elements
+   --noAP    Disables fake AP and just listens for assoc req frames
+   --help    Prints help page
+   --clean   Cleans out all CSV report files
  
  ```
 ### Examples:
@@ -166,6 +180,18 @@ wlanpi@wlanpi:/home/wlanpi/profiler# sudo python ./profiler.py -c 36 -s "JOIN ME
 wlanpi@wlanpi:/home/wlanpi/profiler# sudo python ./profiler.py -c 100 -s "Profiler" --no11r
 ```
 
+```
+# capture frames on channel 100 without the fake AP running
+wlanpi@wlanpi:/home/wlanpi/profiler# sudo python ./profiler.py --noAP -c 100
+
+```
+
+```
+# analyze a association request in a previously captured PCAP file (must be only frame in file)
+wlanpi@wlanpi:/home/wlanpi/profiler# sudo python ./profiler.py -f assoc_frame.pcap
+
+```
+
 ## Screenshot
 
 ![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/images/screenshot1.png)
@@ -176,7 +202,21 @@ wlanpi@wlanpi:/home/wlanpi/profiler# sudo python ./profiler.py -c 100 -s "Profil
 - Reporting of 802.11k capabilities is very poor among clients I have tested - treat with extreme caution (check for neighbor report requests from a WLC/AP debug to be sure)
 
 ## Credits
-This project is a spin-off of the wlan-client=capability project. Full details of the previous project can be found at: [https://github.com/wifinigel/wlan-client-capability]
-
 Thanks to Kobe Watkins for the code to add 802.11w support to the profiler in version 0.03. Much appreciated! :)
+Thanks also to Philipp Ebbecke for spotting the 11ac capabilities bug which got fixed in v0.06.
 
+## Release Notes
+
+- V0.06 (Oct 2019): 
+   - Fixed VHT beamformee capabilities bug (spotted by Philipp Ebbecke) 
+   - Added '--noAP' option to run without the fake AP
+   - Added '-f' option to analyze a previously captured association frame in a pcap file
+   - Added basic 11ax detection
+- v0.05 (Aug 2019):
+   - Fixed issue with profiler not running when no SSH session established to WLANPi
+- v0.04 (Aug 2019):
+   - Added support for front panel menu system
+   - Added external config file support
+- v0.03 (July 2019):
+   - Added 11w support (Thanks Kobe!)
+   - Added MAC OUI lookup support
