@@ -15,6 +15,7 @@ INTERFACE = 'wlan0'
 # we must be root to run this script - exit with msg if not
 import os
 import sys
+import socket
 if not os.geteuid()==0:
     print("\n#####################################################################################")
     print("You must be root to run this script (use 'sudo profiler.py') - exiting" )
@@ -27,6 +28,8 @@ from fakeap.constants import *
 
 from scapy.all import *
 from scapy.layers.dot11 import *
+
+from pymongo import MongoClient
 
 import subprocess
 from types import MethodType
@@ -53,9 +56,9 @@ __status__ = 'beta'
 
 # Report & file dump directories
 DIRS = {
-    'dump_dir': '/var/www/html/profiler', # reporting root dir
-    'clients_dir': '/var/www/html/profiler/clients', # client data dir
-    'reports_dir': '/var/www/html/profiler/reports', # reports dir
+    'dump_dir': '/var/www/html/files/profiler', # reporting root dir
+    'clients_dir': '/var/www/html/files/profiler/clients', # client data dir
+    'reports_dir': '/var/www/html/files/profiler/reports', # reports dir
 }
 
 # check if each dir exists, create if not
@@ -116,6 +119,8 @@ CLIENT_COUNT = 0
 LAST_MANUF = ''
 NO_AP = False
 FILE_ONLY = False
+HOSTNAME_SSID = False
+CRUST_STORE = False
 
 ######################################
 #  assoc req frame tag list numbers
@@ -273,10 +278,12 @@ def analyze_frame(packet):
     
     # dictionary to store capabilities as we decode them
     capability_dict = {}
+    capability_dict_db = {} 
     
     # check if 11n supported
     if HT_CAPABILITIES_TAG in dot11_elt_dict.keys():
         capability_dict['802.11n'] = 'Supported'
+        capability_dict_db['802.11n'] = 1
         
         spatial_streams = 0
         
@@ -289,8 +296,11 @@ def analyze_frame(packet):
                 spatial_streams += 1
         
         capability_dict['802.11n'] = 'Supported (' + str(spatial_streams) + 'ss)'
+        capability_dict_db['802.11n_ss'] = spatial_streams
     else:
         capability_dict['802.11n'] = 'Not reported*'
+        capability_dict_db['802.11n'] = 0
+        capability_dict_db['802.11n_ss'] = 0
         
     # check if 11ac supported
     if VHT_CAPABILITIES_TAG in dot11_elt_dict.keys():
@@ -316,6 +326,8 @@ def analyze_frame(packet):
             stream_mask = stream_mask * 4
         
         vht_support = 'Supported (' + str(spatial_streams) + 'ss)'
+        capability_dict_db['802.11ac'] = 1
+        capability_dict_db['802.11ac_ss'] = spatial_streams
         
         # check for SU & MU beam formee support
         mu_octet = dot11_elt_dict[VHT_CAPABILITIES_TAG][2]
@@ -326,24 +338,34 @@ def analyze_frame(packet):
         # bit 4 indicates support for both octets (1 = supported, 0 = not supported) 
         if (su_octet & beam_form_mask):
             vht_support += ", SU BF supported"
+            capability_dict_db['802.11ac_su_bf'] = 1
         else:
             vht_support += ", SU BF not supported"
+            capability_dict_db['802.11ac_su_bf'] = 0
          
         if (mu_octet & beam_form_mask):
             vht_support += ", MU BF supported"
+            capability_dict_db['802.11ac_mu_bf'] = 1
         else:
             vht_support += ", MU BF not supported"
+            capability_dict_db['802.11ac_mu_bf'] = 0
         
         capability_dict['802.11ac'] = vht_support
 
     else:
         capability_dict['802.11ac'] = 'Not reported*'
+        capability_dict_db['802.11ac'] = 0
+        capability_dict_db['802.11ac_ss'] = 0
+        capability_dict_db['802.11ac_su_bf'] = 0
+        capability_dict_db['802.11ac_mu_bf'] = 0
         
     # check if 11k supported
     if RM_CAPABILITIES_TAG in dot11_elt_dict.keys():
         capability_dict['802.11k'] = 'Supported'
+        capability_dict_db['802.11k'] = 1
     else:
         capability_dict['802.11k'] = 'Not reported* - treat with caution, many clients lie about this'
+        capability_dict_db['802.11k'] = 0
 
     # check if 11r supported
     global FT_REPORTING
@@ -352,11 +374,14 @@ def analyze_frame(packet):
         capability_dict['802.11r'] = 'Reporting disabled (--no11r option used)'
     elif FT_CAPABILITIES_TAG in dot11_elt_dict.keys():
         capability_dict['802.11r'] = 'Supported'
+        capability_dict_db['802.11r'] = 1
     else:
         capability_dict['802.11r'] = 'Not reported*'
+        capability_dict_db['802.11r'] = 0
 
     # check if 11v supported
     capability_dict['802.11v'] = 'Not reported*'
+    capability_dict_db['802.11v'] = 0
     
     if EXT_CAPABILITIES_TAG in dot11_elt_dict.keys():
     
@@ -372,9 +397,11 @@ def analyze_frame(packet):
             # 'And' octet 3 to test for bss transition support
             if octet3 & bss_trans_support:
                 capability_dict['802.11v'] = 'Supported'
+                capability_dict_db['802.11v'] = 1
     
     # check if 11w supported
     capability_dict['802.11w'] = 'Not reported'
+    capability_dict_db['802.11w'] = 0
     if RSN_CAPABILITIES_TAG in dot11_elt_dict.keys():
     
         rsn_cap_list = dot11_elt_dict[RSN_CAPABILITIES_TAG]
@@ -385,10 +412,13 @@ def analyze_frame(packet):
         # bit 8 of 2nd last octet in the rsn capabilites field
         if 127 <= pmf_oct:
             capability_dict['802.11w'] = 'Supported'
+            capability_dict_db['802.11w'] = 1
 
     # check if power capabilites supported
     capability_dict['Max_Power'] = 'Not reported'
+    capability_dict_db['max_power'] = 'Not reported'
     capability_dict['Min_Power'] = 'Not reported'
+    capability_dict_db['min_power'] = 'Not reported'
     
     if POWER_MIN_MAX_TAG in dot11_elt_dict.keys():
 
@@ -403,7 +433,9 @@ def analyze_frame(packet):
             signed_min_power = min_power
         
         capability_dict['Max_Power'] = str(max_power) + " dBm"
+        capability_dict_db['max_power'] = max_power
         capability_dict['Min_Power'] = str(signed_min_power) + " dBm"
+        capability_dict_db['min_power'] = signed_min_power
 
     # check supported channels
     if SUPPORTED_CHANNELS_TAG in dot11_elt_dict.keys():
@@ -426,12 +458,14 @@ def analyze_frame(packet):
                 channel_list.append(start_channel + (i * channel_multiplier))
         
         capability_dict['Supported_Channels'] = ', '.join(map(str, channel_list))
+        capability_dict_db['Supported_Channels'] = channel_list
         
     else:
         capability_dict['Supported_Channels'] =  "Not reported"
     
     # check for Ext tags (e.g. 802.11ax draft support)
     capability_dict['802.11ax_draft'] = 'Not Supported'
+    capability_dict_db['802.11ax_draft'] = 0
     
     if EXT_IE_TAG in dot11_elt_dict.keys():
     
@@ -442,6 +476,8 @@ def analyze_frame(packet):
         # check for 802.11ax support
         if ext_ie_id in dot11ax_draft_ids.keys():
             capability_dict['802.11ax_draft'] = 'Supported (Draft)'
+            capability_dict_db['802.11ax_draft'] = 1
+
     # FIXME: Need to add more 11ax detection features and add them in to the 
     #        report. For example: support for OFDMA UL, OFDMA DL, MU-MIMO UL
     #        MU-MIMO DL, BSS Colouring etc.
@@ -453,12 +489,45 @@ def analyze_frame(packet):
     if MENU_REPORTING == True:
         generate_menu_report(CHANNEL, FT_REPORTING, SSID, CLIENT_COUNT, LAST_MANUF)
     
+    # add to wlanpi-crust
+    if CRUST_STORE == True:
+        db_report(frame_src_addr, mac_oui_manuf, capability_dict_db, mac_addr)
+
     return True
 
 def PktHandler(frame):
 
     analyze_frame(frame)
 
+
+def db_report(frame_src_addr, mac_oui_manuf, capability_dict_db, mac_addr):
+    client = MongoClient()
+    db = client.wlanpi
+    insert_data = {
+        "mac_addr" : mac_addr,
+        "mac_oui_manuf" : mac_oui_manuf,
+        "802_11n" : capability_dict_db['802.11n'],
+        "802_11n_ss" : capability_dict_db['802.11n_ss'],
+        "802_11ac" : capability_dict_db['802.11ac'],
+        "802_11ac_mu_bf" : capability_dict_db['802.11ac_mu_bf'],
+        "802_11ac_su_bf" : capability_dict_db['802.11ac_su_bf'],
+        "802_11ac_ss" : capability_dict_db['802.11ac_ss'],
+        "802_11ax_draft" : capability_dict_db['802.11ax_draft'],
+        "802_11w" : capability_dict_db['802.11w'],
+        "802_11k" : capability_dict_db['802.11k'],
+        "802_11r" : capability_dict_db['802.11r'],
+        "802_11v" : capability_dict_db['802.11v'],
+        "max_power" : capability_dict_db['max_power'],
+        "min_power" : capability_dict_db['min_power']
+    }
+
+    for channel in capability_dict_db['Supported_Channels']:
+        insert_data["channel_" + str(channel)] = 1
+
+    inserted_id = db.profiler_results.insert_one(insert_data).inserted_id
+    print("\t\tAdded result to database. objectid={0}".format(inserted_id))
+
+    return True
 
 def text_report(frame_src_addr, mac_oui_manuf, capability_dict, mac_addr, client_dir, csv_file):
 
@@ -656,16 +725,18 @@ def usage():
     print("    profiler.py --help")
     print("    profiler.py --clean  (Clean out old CSV reports)")
     print ("\n Command line options:\n")
-    print("    -h       Shows help")
-    print("    -c       Sets channel for fake AP")
-    print("    -s       Sets name of fake AP SSID")
-    print("    -i       Sets name of fake AP wireless interface on WLANPi")
-    print("    -f       Read pcap file of assoc frame")
-    print("    -h       Prints help page")
-    print("   --no11r   Disables 802.111r information elements")
-    print("   --noAP    Disables fake AP and just listens for assoc req frames")
-    print("   --help    Prints help page")
-    print("   --clean   Cleans out all CSV report files\n\n")
+    print("    -h           Shows help")
+    print("    -c           Sets channel for fake AP")
+    print("    -s           Sets name of fake AP SSID")
+    print("    -i           Sets name of fake AP wireless interface on WLANPi")
+    print("    -f           Read pcap file of assoc frame")
+    print("    -h           Prints help page")
+    print("   --no11r       Disables 802.111r information elements")
+    print("   --noAP        Disables fake AP and just listens for assoc req frames")
+    print("   --host_ssid   Use the WLANPI hostname as SSID")
+    print("   --crust       Use the WLANPI-crust datastore")
+    print("   --help        Prints help page")
+    print("   --clean       Cleans out all CSV report files\n\n")
     sys.exit()
 
 def report_cleanup():
@@ -701,6 +772,8 @@ def main():
     global CLIENT_COUNT
     global NO_AP
     global FILE_ONLY
+    global HOSTNAME_SSID
+    global CRUST_STORE
     
     # Default action run fakeap & analyze assoc req frames
     if len(sys.argv) < 2:
@@ -711,7 +784,7 @@ def main():
     elif len(sys.argv) >= 2:    
    
         try:
-            opts, args = getopt.getopt(sys.argv[1:],'c:s:i:f:hv', ['no11r', 'clean', 'help', 'menu_mode', 'noAP'])
+            opts, args = getopt.getopt(sys.argv[1:],'c:s:i:f:hv', ['no11r', 'clean', 'help', 'menu_mode', 'noAP','host_ssid','crust'])
         except getopt.GetoptError:
             print("\nOops...syntax error, please re-check: \n")
             usage()
@@ -742,6 +815,10 @@ def main():
             elif opt in ("-f"):
                 FILE_ONLY = True
                 pcap_file = str(arg)
+            elif opt in ("--host_ssid"):
+                HOSTNAME_SSID = True
+            elif opt in ("--crust"):
+                CRUST_STORE = True
 
     else:
         usage()
@@ -772,9 +849,12 @@ def main():
             print(ex)
             sys.exit()
 
+    if HOSTNAME_SSID:
+        ap_ssid = socket.gethostname()
+
     # initialize the menu report file if required
     if MENU_REPORTING == True:
-        generate_menu_report(CHANNEL, FT_REPORTING, SSID, CLIENT_COUNT, 'N/A')
+        generate_menu_report(CHANNEL, FT_REPORTING, ap_ssid, CLIENT_COUNT, 'N/A')
 
     if NO_AP == True:
     
