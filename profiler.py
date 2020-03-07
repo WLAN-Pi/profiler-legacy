@@ -49,6 +49,71 @@ __version__ = '0.06'
 __email__ = 'profiler@wlanpi.com'
 __status__ = 'beta'
 
+# Switch off menu mode reporting by default
+MENU_REPORTING = False
+MENU_REPORT_FILE = '/tmp/profiler_menu_report.txt' # FIXME: Move this to the external config file
+CLIENT_COUNT = 0
+LAST_MANUF = ''
+NO_AP = False
+NO_FT = False
+FT_REPORTING = True # Toggled by --no11r option
+FILE_ONLY = False
+HOSTNAME_SSID = False
+CRUST_STORE = False
+FILES_ROOT = '/var/www/html'
+
+######################################################################################
+# Figure out what our config file will be called (config.ini in same dir as script)
+######################################################################################
+
+config_file = os.path.dirname(os.path.realpath(__file__)) + "/config.ini"
+
+# If file exists, read values in and over-ride the defaults at the top of this script
+if os.path.isfile(config_file):
+    print("#####CONFIG FILE LOAD######\n")
+
+    config = ConfigParser.SafeConfigParser()
+    config.read(config_file)
+
+    if config.has_option('General', 'channel'):
+        CHANNEL = int(config.get('General', 'channel'))
+        print("CHANNEL: {}").format(CHANNEL)
+
+    if config.has_option('General', 'ssid'):
+        SSID = config.get('General', 'ssid')
+        print("SSID: {}").format(SSID)
+
+    if config.has_option('General', 'no11r'):
+        if config.get('General', 'no11r') == 'True':
+            FT_REPORTING = False
+        else:
+            FT_REPORTING = True
+        print("FT_REPORTING: {}").format(FT_REPORTING)
+
+    if config.has_option('General', 'noAP'):
+        if config.get('General', 'noAP') == 'True':
+            NO_AP = True
+        else:
+            NO_AP = False
+        print("NO_AP: {}").format(NO_AP)
+
+    if config.has_option('General', 'host_ssid'):
+        if config.get('General', 'host_ssid') == 'True':
+            HOSTNAME_SSID = True
+        else:
+            HOSTNAME_SSID = False
+        print("HOSTNAME_SSID: {}").format(HOSTNAME_SSID)
+
+    if config.has_option('General', 'crust'):
+        if config.get('General', 'crust') == 'True':
+            CRUST_STORE = True
+        else:
+            CRUST_STORE = False
+        print("CRUST_STORE: {}").format(CRUST_STORE)
+
+    if config.has_option('General', 'files_root'):
+        FILES_ROOT = config.get('General', 'files_root')
+        print("FILES_ROOT: {}").format(FILES_ROOT)
 
 ################################
 # Set up working directories
@@ -56,9 +121,9 @@ __status__ = 'beta'
 
 # Report & file dump directories
 DIRS = {
-    'dump_dir': '/var/www/html/files/profiler', # reporting root dir
-    'clients_dir': '/var/www/html/files/profiler/clients', # client data dir
-    'reports_dir': '/var/www/html/files/profiler/reports', # reports dir
+    'dump_dir': FILES_ROOT + '/files/profiler', # reporting root dir
+    'clients_dir': FILES_ROOT + '/files/profiler/clients', # client data dir
+    'reports_dir': FILES_ROOT + '/files/profiler/reports', # reports dir
 }
 
 # check if each dir exists, create if not
@@ -75,27 +140,6 @@ for dir_key in ['dump_dir', 'clients_dir', 'reports_dir']:
 # FIXME: Move these directory defitnitions in to the external config file
 #        for future flexibility
 
-######################################################################################
-# Figure out what our config file will be called (config.ini in same dir as script)
-######################################################################################
-
-config_file = os.path.dirname(os.path.realpath(__file__)) + "/config.ini"
-
-# If file exists, read values in and over-ride the defaults at the top of this script
-if os.path.isfile(config_file):
-
-    config = ConfigParser.SafeConfigParser()
-    config.read(config_file)
-
-    if config.has_option('General', 'channel'):
-        CHANNEL = int(config.get('General', 'channel'))
-
-    if config.has_option('General', 'ssid'):
-        SSID = config.get('General', 'ssid')
-
-    if config.has_option('General', 'interface'):
-        INTERFACE = config.get('General', 'interface')
-
 ###################################################
 # figure out the dest address for this SSH session 
 # (Gives us the IP address for the WLANPi Web GUI)
@@ -111,16 +155,6 @@ if dest_ip_re is None:
     SSH_DEST_IP = False
 else:            
     SSH_DEST_IP = dest_ip_re.group(1)
-
-# Switch off menu mode reporting by default
-MENU_REPORTING = False
-MENU_REPORT_FILE = '/tmp/profiler_menu_report.txt' # FIXME: Move this to the external config file
-CLIENT_COUNT = 0
-LAST_MANUF = ''
-NO_AP = False
-FILE_ONLY = False
-HOSTNAME_SSID = False
-CRUST_STORE = False
 
 ######################################
 #  assoc req frame tag list numbers
@@ -140,7 +174,6 @@ RSN_CAPABILITIES_TAG    = "48"
 
 # 802.11r support info
 FT_CAPABILITIES_TAG    = "54"
-FT_REPORTING = True # Toggled by --no11r option
 
 # 802.11k support info
 RM_CAPABILITIES_TAG    = "70"
@@ -731,7 +764,7 @@ def usage():
     print("    -i           Sets name of fake AP wireless interface on WLANPi")
     print("    -f           Read pcap file of assoc frame")
     print("    -h           Prints help page")
-    print("   --no11r       Disables 802.111r information elements")
+    print("   --no11r       Disables 802.11r information elements")
     print("   --noAP        Disables fake AP and just listens for assoc req frames")
     print("   --host_ssid   Use the WLANPI hostname as SSID")
     print("   --crust       Use the WLANPI-crust datastore")
@@ -849,7 +882,7 @@ def main():
             print(ex)
             sys.exit()
 
-    if HOSTNAME_SSID:
+    if HOSTNAME_SSID == True:
         ap_ssid = socket.gethostname()
 
     # initialize the menu report file if required
