@@ -19,66 +19,21 @@ Report files are dumped in the following web directories for browsing:
 - http://<wlanpi_ip_address>/profiler/clients (on directory per client, with PCAP and text capability report dumped in the directory)
 - http://<wlanpi_ip_address>/profiler/reports (contains a CSV report of all clients for each session when the script is run)
 
-## Upgrading the Script
 
-To upgrade from version v0.05 to v0.06, copy the 'profiler.py' from this repo to the '/home/wlanpi/profiler/' directory of your WLANPi. If yu are running a version older than v0.05, you will need to follow the full install process outlined below - it's probably quicker to update your WLANPi image. 
 
-## Installing The Script From Scratch
+## Running the Script (Front Panel Menu System)
 
-(Note that the script is part of standard WLANPi image, so you will generally not need these instructions unless a new script version becomes available. To check your current script version, SSH to your WLANPi and run the command "sudo /home/wlanpi/profiler/profiler.py -v")
+From version v0.21 of the WLANPi FPMS, it is possible to launch the profiler script using the front panel keys of the WLANPi, so that no CLI interaction is required - all that is required is to start the Profiler process via the buttons, then view the web reports as clients are detected. The required option can be found on the front panel menu system at : Home -> 3.Apps -> 3.Profiler
 
-### Pre-requisites
+Options are provided to start, stop and view the status of the profiler. Once the profiler has been started, the Profiler status option will show the channel, SSID and client count of detected clients. The status screen also shows a truncated copy of the manufacturer name of the last detected client, which, together with the detected clients counter, can be useful in indicating whether clients have triggered the Profiler analysis process. 
 
-The Profiler script can be run from the CLI of the WLANPi using the steps outline in the next section. However, if you would like to also take advantage of using the front panel menu controls, you will need to also install the files from the following project:
+The reporting operation is as per the CLI mode of operation described in the previous section, with reports being generated and visible from the WLANPi web GUI.
 
-- [wlanpi-nanohat-oled](https://github.com/WLAN-Pi/wlanpi-nanohat-oled) (v0.21 or better)
+Note: there is also an option to start the profiler with no 802.11r information elements being included in beacons. This will help with clients that are sensitive to 802.11r and will not attempt to associate when they see the 802.11r IEs
 
-Each project has its own install instructions, but is generally just a simple file copy operation. (Apologies if this seems a but clunky - it is. We'll consolidate this at some point in the near future to make things easier)
+![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/images/profiler_status.jpg)
 
-### Script installation
-
-To install the profiler script itself on the WLANPi perform the following steps:
-
-- Download the profiler.py and config.ini file from the github repo: https://github.com/WLAN-Pi/profiler
-- Open an SSH session to the WLANPi using the 'wlanpi' username - this will drop you in to the /home/wlan directory (verify with 'pwd')
-- If required, create a new Profiler directory using the command : mkdir profiler (this will generally already exist if you had a previous WLANPi image on your device)
-- Change directory to the Profiler directory: 
-```
- cd ./profiler
-```
-- Transfer the "profiler.py" script and "config.ini" files in to the profiler directory on the WLANPi (e.g. using SFTP)
-- Make the Proflier script executable with the command 
-```
- chmod a+x profiler.py"
-```
-- Install the 'manuf' Python module to provide us with MAC OUI lookup capabilities, then update its OUI lookup file: 
-```
- sudo pip install manuf
- cd /usr/local/lib/python2.7/dist-packages/manuf
- sudo python manuf.py --update
-```
-- Reboot the WLANPi: 
-```
- sudo reboot
-```
-- Ensure that a USB wireless adapter that support monitor mode (e.g. Comfast CF-912AC) is plugged in to the WLANPi
-
-### MAC OUI Database Update
-
-From version 0.03 of the script, a MAC OUI lookup is included in the reports to show the manufacturer of the client based on the 6-byte MAC OUI. This feature is provided by a Python module called "manuf". It uses a local MAC OUI database file to lookup OUI information. An OUI lookup file is provided with the module, though it may be quite old, depending on the date of the last update of the module code.
-
-If you find some devices are not reporting a manufacturer, the OUI DB file may need an update. To update the manuf OUI DB file, perform the following steps from the CLI of the WLANPi:
-
-- Ensure the WLANPi is connected to a network with Internet access
-- SSH to the WLANPi
-- Perform the following commands:
-
-```
- cd /usr/local/lib/python2.7/dist-packages/manuf
- python manuf.py --update
-```
-
-There are no outputs provided to indicate when/if the update has been successful, so I suggest only performing this step if absolutely necessary. If errors reported by the profiler script after running the update, try running the update again, as this operation seems a little "variable" in its success rate.
+A "Purge" option is also provided via the menu system. This will delete all old summary reports from the WLANPi (but not individual client reports)
 
 ## Running the Script (CLI)
 
@@ -102,20 +57,6 @@ To trigger client profiling when the script is running:
 
 (Note: From verion 0.06, it is possible to run on the CLI with the "--NoAP" option to just listen to association requests and not fire up the fake AP. In this instance, you will
 need to have an AP on your own running on the channel you wish to test on.)
-
-## Running the Script (Front Panel Menu System)
-
-From version v0.21 of the WLANPi FPMS, it is possible to launch the profiler script using the front panel keys of the WLANPi, so that no CLI interaction is required - all that is required is to start the Profiler process via the buttons, then view the web reports as clients are detected. The required option can be found on the front panel menu system at : Home -> 3.Apps -> 3.Profiler
-
-Options are provided to start, stop and view the status of the profiler. Once the profiler has been started, the Profiler status option will show the channel, SSID and client count of detected clients. The status screen also shows a truncated copy of the manufacturer name of the last detected client, which, together with the detected clients counter, can be useful in indicating whether clients have triggered the Profiler analysis process. 
-
-The reporting operation is as per the CLI mode of operation described in the previous section, with reports being generated and visible from the WLANPi web GUI.
-
-Note: there is also an option to start the profiler with no 802.11r information elements being included in beacons. This will help with clients that are sensitive to 802.11r and will not attempt to associate when they see the 802.11r IEs
-
-![Screenshot](https://github.com/WLAN-Pi/Profiler/blob/master/images/profiler_status.jpg)
-
-A "Purge" option is also provided via the menu system. This will delete all old summary reports from the WLANPi (but not individual client reports)
 
 ### Configuration
 
@@ -161,7 +102,7 @@ Note that this configuration file has been provided to make it easier to change 
    --clean   Cleans out all CSV report files
  
  ```
-### Examples:
+### Examples (Launching profiler from the CLI):
 
 ```
 # capture frames on channel 48 using the default SSID
@@ -221,3 +162,61 @@ Thanks also to Philipp Ebbecke for spotting the 11ac capabilities bug which got 
    - Added 11w support (Thanks Kobe!)
    - Added MAC OUI lookup support
 
+# Developer Information
+
+## Installing The Script From Scratch
+
+(Note that the script is part of standard WLANPi image, so you will generally not need these instructions unless a new script version becomes available. To check your current script version, SSH to your WLANPi and run the command "sudo /home/wlanpi/profiler/profiler.py -v")
+
+### Pre-requisites
+
+The Profiler script can be run from the CLI of the WLANPi using the steps outline in the next section. However, if you would like to also take advantage of using the front panel menu controls, you will need to also install the files from the following project:
+
+- [wlanpi-nanohat-oled](https://github.com/WLAN-Pi/wlanpi-nanohat-oled) (v0.21 or better)
+
+Each project has its own install instructions, but is generally just a simple file copy operation. (Apologies if this seems a but clunky - it is. We'll consolidate this at some point in the near future to make things easier)
+
+### Script installation
+
+To install the profiler script itself on the WLANPi perform the following steps:
+
+- Download the profiler.py and config.ini file from the github repo: https://github.com/WLAN-Pi/profiler
+- Open an SSH session to the WLANPi using the 'wlanpi' username - this will drop you in to the /home/wlan directory (verify with 'pwd')
+- If required, create a new Profiler directory using the command : mkdir profiler (this will generally already exist if you had a previous WLANPi image on your device)
+- Change directory to the Profiler directory: 
+```
+ cd ./profiler
+```
+- Transfer the "profiler.py" script and "config.ini" files in to the profiler directory on the WLANPi (e.g. using SFTP)
+- Make the Proflier script executable with the command 
+```
+ chmod a+x profiler.py"
+```
+- Install the 'manuf' Python module to provide us with MAC OUI lookup capabilities, then update its OUI lookup file: 
+```
+ sudo pip install manuf
+ cd /usr/local/lib/python2.7/dist-packages/manuf
+ sudo python manuf.py --update
+```
+- Reboot the WLANPi: 
+```
+ sudo reboot
+```
+- Ensure that a USB wireless adapter that support monitor mode (e.g. Comfast CF-912AC) is plugged in to the WLANPi
+
+### MAC OUI Database Update
+
+From version 0.03 of the script, a MAC OUI lookup is included in the reports to show the manufacturer of the client based on the 6-byte MAC OUI. This feature is provided by a Python module called "manuf". It uses a local MAC OUI database file to lookup OUI information. An OUI lookup file is provided with the module, though it may be quite old, depending on the date of the last update of the module code.
+
+If you find some devices are not reporting a manufacturer, the OUI DB file may need an update. To update the manuf OUI DB file, perform the following steps from the CLI of the WLANPi:
+
+- Ensure the WLANPi is connected to a network with Internet access
+- SSH to the WLANPi
+- Perform the following commands:
+
+```
+ cd /usr/local/lib/python2.7/dist-packages/manuf
+ python manuf.py --update
+```
+
+There are no outputs provided to indicate when/if the update has been successful, so I suggest only performing this step if absolutely necessary. If errors reported by the profiler script after running the update, try running the update again, as this operation seems a little "variable" in its success rate.
