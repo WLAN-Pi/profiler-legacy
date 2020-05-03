@@ -58,7 +58,7 @@ To trigger client profiling when the script is running:
 (Note: From verion 0.06, it is possible to run on the CLI with the "--NoAP" option to just listen to association requests and not fire up the fake AP. In this instance, you will
 need to have an AP on your own running on the channel you wish to test on.)
 
-### Configuration
+## Configuration
 
 To change the default operation of the script (v0.4 and later), a "config.ini" can be found in the same directory as the profiler script (/home/wlanpi/profiler). This can be used as an easy way to modify the channel, SSID and interface adapter used by the Profiler script.
 
