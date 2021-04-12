@@ -1,4 +1,9 @@
-# Profiler
+# This project has been deprecated and it is being replaced by [profiler](https://github.com/WLAN-Pi/profiler)
+
+---
+
+# Profiler-legacy
+
 A Python script to check wireless (802.11) capabilities based on association request frame contents. It has been developed to be specifically used with the WLAN Pi platform. 
 
 The script performs two functions:
